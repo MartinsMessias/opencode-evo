@@ -1,7 +1,7 @@
-Spawns multiple subagents concurrently (Swarm) to drastically reduce overall execution time for parallelizeable tasks.
+Spawns multiple subagents concurrently (Swarm) to drastically reduce overall execution time for parallelizable or multi-step tasks.
 
-Use this tool when the user requests multiple independent goals (e.g. "Migrate the database and adjust the frontend UI" or "Fix the API and write tests for it"). The orchestrator (you) will delegate the work to specialized subagents that will operate completely simultaneously. 
+Use this tool proactively as an 'Orchestrator'. If a task can be decomposed into independent sub-steps (e.g. "Analyze 3 different directories", "Fix a bug and then write tests", "Migrate backend and update frontend"), YOU MUST use 'swarm' to parallelize them. Do not wait for the user to ask for multiple goals; decompose complex engineering tasks yourself to optimize latency.
 
-IMPORTANT: For simpler or heavily scoped tasks (e.g. a small formatting change in a single file), you can explicitly request a cheaper or faster model on the specific task to save cost, such as "@ai-sdk/anthropic/claude-3-haiku-20240307". 
+IMPORTANT: Each task prompt should be self-contained and descriptive. For simpler tasks, you can explicitly request cheaper/faster models (e.g. "@ai-sdk/anthropic/claude-3-haiku-20240307") to minimize costs.
 
 {agents}

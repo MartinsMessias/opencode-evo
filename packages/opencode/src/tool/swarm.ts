@@ -52,7 +52,28 @@ export const SwarmTool = Tool.define("swarm", async (ctx) => {
       if (msg.info.role !== "assistant") throw new Error("Not an assistant message")
       const assistantMsg = msg.info
 
+      const total = params.tasks.length
+      let done = 0
+      const status: Record<string, string> = {}
+
+      function emitProgress() {
+        const lines = Object.entries(status)
+          .map(([name, state]) => `  ${state === "done" ? "✓" : state === "error" ? "✗" : "⟳"} ${name}`)
+          .join("\n")
+        ctx.metadata({
+          title: `Swarming ${done}/${total} tasks\n${lines}`,
+          metadata: {
+            numberOfTasks: total,
+            completedTasks: done,
+            taskStatus: { ...status },
+          },
+        })
+      }
+
       const executeTask = async (task: typeof params.tasks[0]) => {
+        status[task.description] = "running"
+        emitProgress()
+
         if (!ctx.extra?.bypassAgentCheck) {
           await ctx.ask({
             permission: "task",
@@ -138,6 +159,10 @@ export const SwarmTool = Tool.define("swarm", async (ctx) => {
 
         const text = result.parts.findLast((x) => x.type === "text")?.text ?? ""
 
+        done++
+        status[task.description] = "done"
+        emitProgress()
+
         return [
           `--- SWARM TASK: ${task.description} (@${task.subagent_type}) ---`,
           `task_id: ${session.id}`,
@@ -147,16 +172,24 @@ export const SwarmTool = Tool.define("swarm", async (ctx) => {
         ].join("\n")
       }
 
-      ctx.metadata({
-        title: `Swarming ${params.tasks.length} subagents`,
-      })
+      emitProgress()
 
-      const results = await Promise.all(params.tasks.map(t => executeTask(t).catch((err) => `Task failed: ${t.description} - Error: ${err.message}`)));
+      const results = await Promise.all(params.tasks.map(t => executeTask(t).catch((err) => {
+        done++
+        status[t.description] = "error"
+        emitProgress()
+        return `Task failed: ${t.description} - Error: ${err.message}`
+      })))
 
       return {
-        title: `Swarmed ${params.tasks.length} independent subagents`,
+        title: `Swarm: ${total} subagents (${done} completed)`,
         metadata: {
-          numberOfTasks: params.tasks.length,
+          title: `✓ Swarming ${done}/${total} tasks\n${Object.entries(status)
+            .map(([name, state]) => `  ${state === "done" ? "✓" : state === "error" ? "✗" : "⟳"} ${name}`)
+            .join("\n")}`,
+          numberOfTasks: total,
+          completedTasks: done,
+          taskStatus: status,
         },
         output: results.join("\n\n"),
       }
