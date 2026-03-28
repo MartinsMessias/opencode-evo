@@ -205,6 +205,36 @@ export namespace LLM {
         }
       }
     }
+    // Apply caching to the last active tool to cache system prompt and tools
+    // This dramatically reduces latency and cost for subsequent API calls
+    const activeToolKeys = Object.keys(tools).filter((x) => x !== "invalid")
+    if (
+      activeToolKeys.length > 0 &&
+      (input.model.providerID === "anthropic" ||
+        input.model.api.id.includes("anthropic") ||
+        input.model.api.id.includes("claude") ||
+        input.model.id.includes("anthropic") ||
+        input.model.id.includes("claude") ||
+        input.model.api.npm === "@ai-sdk/anthropic") &&
+      input.model.api.npm !== "@ai-sdk/gateway"
+    ) {
+      const key = activeToolKeys[activeToolKeys.length - 1]
+      const t = tools[key] as typeof tools[string] & {
+        experimental_providerMetadata?: Record<string, unknown>
+        providerOptions?: Record<string, unknown>
+      }
+
+      const opts = {
+        anthropic: { cacheControl: { type: "ephemeral" } },
+        openrouter: { cacheControl: { type: "ephemeral" } },
+        bedrock: { cachePoint: { type: "default" } },
+        openaiCompatible: { cache_control: { type: "ephemeral" } },
+        copilot: { copilot_cache_control: { type: "ephemeral" } },
+      }
+
+      t.experimental_providerMetadata = mergeDeep(t.experimental_providerMetadata ?? {}, opts)
+      t.providerOptions = mergeDeep(t.providerOptions ?? {}, opts)
+    }
 
     return streamText({
       onError(error) {
