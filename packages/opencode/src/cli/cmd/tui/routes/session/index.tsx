@@ -46,6 +46,7 @@ import type { WebFetchTool } from "@/tool/webfetch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
+import { SwarmTool } from "@/tool/swarm"
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -1591,6 +1592,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "skill"}>
           <Skill {...toolprops} />
         </Match>
+        <Match when={props.part.tool === "swarm"}>
+          <Swarm {...toolprops} />
+        </Match>
         <Match when={true}>
           <GenericTool {...toolprops} />
         </Match>
@@ -2241,6 +2245,35 @@ function Question(props: ToolProps<typeof QuestionTool>) {
     </Switch>
   )
 }
+
+function Swarm(props: ToolProps<typeof SwarmTool>) {
+  const isRunning = createMemo(() => props.part.state.status === "running")
+  const statusIcon = createMemo(() => {
+    if (props.part.state.status === "completed") return "✓"
+    if (props.part.state.status === "error") return "✗"
+    return "⟳"
+  })
+  const title = createMemo(() => {
+    const s = props.part.state as any
+    const m = props.metadata as any
+    // Prioritize current state title for real-time updates
+    return s.title || m.title || "Swarming agents..."
+  })
+
+  return (
+    <InlineTool
+      icon={statusIcon()}
+      spinner={false}
+      // Show title whenever it exists, but use status for icon/styling
+      complete={props.part.state.status === "completed" || !!title()}
+      pending="Swarming..."
+      part={props.part}
+    >
+      {title()}
+    </InlineTool>
+  )
+}
+
 
 function Skill(props: ToolProps<typeof SkillTool>) {
   return (
