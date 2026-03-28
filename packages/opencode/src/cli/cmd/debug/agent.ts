@@ -152,6 +152,7 @@ async function createToolContext(agent: Agent.Info) {
     messageID,
     callID: PartID.ascending(),
     agent: agent.name,
+    cwd: Instance.directory,
     abort: new AbortController().signal,
     messages: [],
     metadata: () => {},

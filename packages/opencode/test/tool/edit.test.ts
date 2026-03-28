@@ -8,6 +8,7 @@ import { FileTime } from "../../src/file/time"
 import { SessionID, MessageID } from "../../src/session/schema"
 
 const ctx = {
+  get cwd() { return Instance.directory },
   sessionID: SessionID.make("ses_test-edit-session"),
   messageID: MessageID.make(""),
   callID: "",

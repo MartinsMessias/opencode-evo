@@ -6,6 +6,7 @@ import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 
 const ctx = {
+  get cwd() { return Instance.directory },
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make(""),
   callID: "",

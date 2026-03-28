@@ -7,6 +7,7 @@ import { SessionID, MessageID } from "../../src/session/schema"
 const projectRoot = path.join(__dirname, "../..")
 
 const ctx = {
+  cwd: projectRoot,
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make(""),
   callID: "",
