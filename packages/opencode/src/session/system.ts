@@ -14,8 +14,13 @@ import type { Provider } from "@/provider/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
+import { Memory } from "@/memory/memory"
+import { ProjectID } from "@/project/schema"
+import { Log } from "@/util/log"
 
 export namespace SystemPrompt {
+  const log = Log.create({ service: "system-prompt" })
+
   export function provider(model: Provider.Model) {
     if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
       return [PROMPT_BEAST]
@@ -54,6 +59,14 @@ export namespace SystemPrompt {
             : ""
         }`,
         `</directories>`,
+        `<tool_routing>`,
+        `  When you need to find where a function/class/type is defined, who calls it, or what implements it, ALWAYS prefer the code_graph tool over grep. It uses LSP for precise structural matches.`,
+        `  Use ast_patch ONLY for structural refactors: adding/removing imports, adding parameters, renaming symbols, or removing functions. For inserting or removing text/comments/lines, use the regular Edit tool.`,
+        `  Use grep/ripgrep for plain text search, patterns across many files, or non-TS/JS files.`,
+        `</tool_routing>`,
+        `<swarm_orchestration>`,
+        `  Always think in parallel. If a task is complex or involves multiple independent steps, act as an Orchestrator and use the swarm tool to delegate them to specialized subagents. Do not process them sequentially if they can be done concurrently.`,
+        `</swarm_orchestration>`,
       ].join("\n"),
     ]
   }
@@ -71,4 +84,28 @@ export namespace SystemPrompt {
       Skill.fmt(list, { verbose: true }),
     ].join("\n")
   }
+
+  export async function memory() {
+    const project = Instance.project
+    if (project.id === ProjectID.global) return undefined
+
+    try {
+      const items = await Memory.all(project.id)
+      if (items.length === 0) return undefined
+
+      const lines = items.map((m) => `- ${m.content}`)
+      return [
+        "<project_memory>",
+        "The following are previously saved rules, patterns, and preferences for this project.",
+        "You MUST follow these constraints unless the user explicitly overrides them.",
+        "",
+        ...lines,
+        "</project_memory>",
+      ].join("\n")
+    } catch (err) {
+      log.warn("failed to load episodic memory", { err })
+      return undefined
+    }
+  }
 }
+

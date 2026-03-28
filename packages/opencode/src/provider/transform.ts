@@ -190,8 +190,14 @@ export namespace ProviderTransform {
   }
 
   function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
-    const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
-    const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
+    const system = msgs.filter((msg) => msg.role === "system")
+    const nonSystem = msgs.filter((msg) => msg.role !== "system")
+
+    const cachedSystem = system.length > 0 ? [system[system.length - 1]] : []
+    const firstNonSystem = nonSystem.length > 0 ? [nonSystem[0]] : []
+    const lastTwo = nonSystem.slice(-2).filter((msg) => !firstNonSystem.includes(msg))
+
+    const cacheTargets = unique([...cachedSystem, ...firstNonSystem, ...lastTwo])
 
     const providerOptions = {
       anthropic: {
@@ -211,7 +217,7 @@ export namespace ProviderTransform {
       },
     }
 
-    for (const msg of unique([...system, ...final])) {
+    for (const msg of cacheTargets) {
       const useMessageLevelOptions =
         model.providerID === "anthropic" ||
         model.providerID.includes("bedrock") ||

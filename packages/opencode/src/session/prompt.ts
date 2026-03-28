@@ -371,7 +371,7 @@ export namespace SessionPrompt {
           agent: task.agent,
           variant: lastUser.variant,
           path: {
-            cwd: Instance.directory,
+            cwd: session.directory,
             root: Instance.worktree,
           },
           cost: 0,
@@ -442,6 +442,7 @@ export namespace SessionPrompt {
           callID: part.callID,
           extra: { bypassAgentCheck: true },
           messages: msgs,
+          cwd: session.directory,
           async metadata(input) {
             part = (await Session.updatePart({
               ...part,
@@ -603,7 +604,7 @@ export namespace SessionPrompt {
           agent: agent.name,
           variant: lastUser.variant,
           path: {
-            cwd: Instance.directory,
+            cwd: session.directory,
             root: Instance.worktree,
           },
           cost: 0,
@@ -679,11 +680,15 @@ export namespace SessionPrompt {
       await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
       // Build system prompt, adding structured output instruction if needed
-      const skills = await SystemPrompt.skills(agent)
+      const [skills, memories] = await Promise.all([
+        SystemPrompt.skills(agent),
+        SystemPrompt.memory(),
+      ])
       const system = [
         ...(await SystemPrompt.environment(model)),
         ...(skills ? [skills] : []),
         ...(await InstructionPrompt.system()),
+        ...(memories ? [memories] : []),
       ]
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {
@@ -789,18 +794,18 @@ export namespace SessionPrompt {
       extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
       agent: input.agent.name,
       messages: input.messages,
+      cwd: input.session.directory,
       metadata: async (val: { title?: string; metadata?: any }) => {
         const match = input.processor.partFromToolCall(options.toolCallId)
         if (match && match.state.status === "running") {
           await Session.updatePart({
             ...match,
             state: {
-              title: val.title,
-              metadata: val.metadata,
-              status: "running",
-              input: args,
-              time: {
-                start: Date.now(),
+              ...match.state,
+              title: val.title ?? (match.state as any).title,
+              metadata: {
+                ...(match.state.metadata ?? {}),
+                ...(val.metadata ?? {}),
               },
             },
           })
@@ -1197,6 +1202,7 @@ export namespace SessionPrompt {
                       agent: input.agent!,
                       messageID: info.id,
                       extra: { bypassCwdCheck: true, model },
+                      cwd: Instance.directory,
                       messages: [],
                       metadata: async () => {},
                       ask: async () => {},
@@ -1256,6 +1262,7 @@ export namespace SessionPrompt {
                   agent: input.agent!,
                   messageID: info.id,
                   extra: { bypassCwdCheck: true },
+                  cwd: Instance.directory,
                   messages: [],
                   metadata: async () => {},
                   ask: async () => {},

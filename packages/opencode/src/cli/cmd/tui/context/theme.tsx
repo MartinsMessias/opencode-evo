@@ -36,6 +36,8 @@ import vercel from "./theme/vercel.json" with { type: "json" }
 import vesper from "./theme/vesper.json" with { type: "json" }
 import zenburn from "./theme/zenburn.json" with { type: "json" }
 import carbonfox from "./theme/carbonfox.json" with { type: "json" }
+import evo from "./theme/evo.json" with { type: "json" }
+import monochrome from "./theme/monochrome.json" with { type: "json" }
 import { useKV } from "./kv"
 import { useRenderer } from "@opentui/solid"
 import { createStore, produce } from "solid-js/store"
@@ -119,6 +121,8 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   vercel,
   zenburn,
   carbonfox,
+  evo,
+  monochrome,
 }
 
 type State = {
@@ -155,7 +159,7 @@ const [store, setStore] = createStore<State>({
   themes: listThemes(),
   mode: "dark",
   lock: undefined,
-  active: "opencode",
+  active: "evo",
   ready: false,
 })
 
@@ -305,8 +309,8 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
         const mode = pick(kv.get("theme_mode", props.mode))
         draft.mode = lock ?? mode ?? props.mode
         draft.lock = lock
-        const active = config.theme ?? kv.get("theme", "opencode")
-        draft.active = typeof active === "string" ? active : "opencode"
+        const active = config.theme ?? kv.get("theme", "evo")
+        draft.active = typeof active === "string" ? active : "evo"
         draft.ready = false
       }),
     )
@@ -325,7 +329,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
             syncThemes()
           })
           .catch(() => {
-            setStore("active", "opencode")
+            setStore("active", "evo")
           }),
       ]).finally(() => {
         setStore("ready", true)

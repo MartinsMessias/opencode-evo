@@ -46,6 +46,7 @@ import type { WebFetchTool } from "@/tool/webfetch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
+import { SwarmTool } from "@/tool/swarm"
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -500,7 +501,7 @@ export function Session() {
       },
     },
     {
-      title: "Undo previous message",
+      title: "Undo last iteration (Revert Files)",
       value: "session.undo",
       keybind: "messages_undo",
       category: "Session",
@@ -519,6 +520,7 @@ export function Session() {
             messageID: message.id,
           })
           .then(() => {
+            toast.show({ message: "Restored files to checkpoint!", variant: "success" })
             toBottom()
           })
         const parts = sync.data.part[message.id]
@@ -1325,6 +1327,8 @@ function UserMessage(props: {
 
 function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const local = useLocal()
+  const sdk = useSDK()
+  const toast = useToast()
   const { theme } = useTheme()
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
@@ -1384,7 +1388,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
+          <box paddingLeft={3} flexDirection="row" gap={1}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1405,6 +1409,25 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
             </text>
+            <Show when={props.last && final() && !props.message.error}>
+              <box 
+                flexDirection="row"
+                marginTop={1}
+                onMouseUp={() => {
+                   sdk.client.session.revert({
+                     sessionID: props.message.sessionID,
+                     messageID: props.message.parentID!,
+                   }).then(() => {
+                     toast.show({ message: "Restored files to checkpoint!", variant: "success" })
+                   }).catch(() => {
+                     toast.show({ message: "Failed to undo iteration", variant: "error" })
+                   })
+                }}
+              >
+                <text fg={theme.textMuted}>· </text>
+                <text fg={theme.textMuted} bg={theme.backgroundPanel}> [ ↺ Undo ] </text>
+              </box>
+            </Show>
           </box>
         </Match>
       </Switch>
@@ -1568,6 +1591,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         </Match>
         <Match when={props.part.tool === "skill"}>
           <Skill {...toolprops} />
+        </Match>
+        <Match when={props.part.tool === "swarm"}>
+          <Swarm {...toolprops} />
         </Match>
         <Match when={true}>
           <GenericTool {...toolprops} />
@@ -2219,6 +2245,35 @@ function Question(props: ToolProps<typeof QuestionTool>) {
     </Switch>
   )
 }
+
+function Swarm(props: ToolProps<typeof SwarmTool>) {
+  const isRunning = createMemo(() => props.part.state.status === "running")
+  const statusIcon = createMemo(() => {
+    if (props.part.state.status === "completed") return "✓"
+    if (props.part.state.status === "error") return "✗"
+    return "⟳"
+  })
+  const title = createMemo(() => {
+    const s = props.part.state as any
+    const m = props.metadata as any
+    // Prioritize current state title for real-time updates
+    return s.title || m.title || "Swarming agents..."
+  })
+
+  return (
+    <InlineTool
+      icon={statusIcon()}
+      spinner={false}
+      // Show title whenever it exists, but use status for icon/styling
+      complete={props.part.state.status === "completed" || !!title()}
+      pending="Swarming..."
+      part={props.part}
+    >
+      {title()}
+    </InlineTool>
+  )
+}
+
 
 function Skill(props: ToolProps<typeof SkillTool>) {
   return (

@@ -7,6 +7,7 @@ import { GrepTool } from "./grep"
 import { BatchTool } from "./batch"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
+import { SwarmTool } from "./swarm"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
@@ -22,6 +23,10 @@ import { Plugin } from "../plugin"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
+import { SemanticSearchTool } from "./semantic_search"
+import { AstEditTool } from "./ast_edit"
+import { MemoryWriteTool } from "./memory_write"
+import { MemorySearchTool } from "./memory_search"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { LspTool } from "./lsp"
@@ -125,10 +130,15 @@ export namespace ToolRegistry {
           EditTool,
           WriteTool,
           TaskTool,
+          SwarmTool,
           WebFetchTool,
           TodoWriteTool,
           WebSearchTool,
           CodeSearchTool,
+          SemanticSearchTool,
+          AstEditTool,
+          MemoryWriteTool,
+          MemorySearchTool,
           SkillTool,
           ApplyPatchTool,
           ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),

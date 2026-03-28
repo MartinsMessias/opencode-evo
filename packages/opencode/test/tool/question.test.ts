@@ -5,6 +5,7 @@ import * as QuestionModule from "../../src/question"
 import { SessionID, MessageID } from "../../src/session/schema"
 
 const ctx = {
+  cwd: "",
   sessionID: SessionID.make("ses_test-session"),
   messageID: MessageID.make("test-message"),
   callID: "test-call",

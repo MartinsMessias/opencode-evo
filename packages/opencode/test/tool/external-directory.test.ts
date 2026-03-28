@@ -7,6 +7,7 @@ import type { Permission } from "../../src/permission"
 import { SessionID, MessageID } from "../../src/session/schema"
 
 const baseCtx: Omit<Tool.Context, "ask"> = {
+  get cwd() { return Instance.directory },
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make(""),
   callID: "",

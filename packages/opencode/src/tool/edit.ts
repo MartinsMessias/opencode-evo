@@ -18,6 +18,7 @@ import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectory } from "./external-directory"
+import { levenshtein, calculateSimilarity } from "../util/string"
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 
@@ -51,7 +52,7 @@ export const EditTool = Tool.define("edit", {
       throw new Error("No changes to apply: oldString and newString are identical.")
     }
 
-    const filePath = path.isAbsolute(params.filePath) ? params.filePath : path.join(Instance.directory, params.filePath)
+    const filePath = path.isAbsolute(params.filePath) ? params.filePath : path.join(ctx.cwd, params.filePath)
     await assertExternalDirectory(ctx, filePath)
 
     let diff = ""
@@ -172,26 +173,7 @@ export type Replacer = (content: string, find: string) => Generator<string, void
 const SINGLE_CANDIDATE_SIMILARITY_THRESHOLD = 0.0
 const MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD = 0.3
 
-/**
- * Levenshtein distance algorithm implementation
- */
-function levenshtein(a: string, b: string): number {
-  // Handle empty strings
-  if (a === "" || b === "") {
-    return Math.max(a.length, b.length)
-  }
-  const matrix = Array.from({ length: a.length + 1 }, (_, i) =>
-    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
-  )
 
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1
-      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost)
-    }
-  }
-  return matrix[a.length][b.length]
-}
 
 export const SimpleReplacer: Replacer = function* (_content, find) {
   yield find
@@ -591,6 +573,60 @@ export const ContextAwareReplacer: Replacer = function* (content, find) {
   }
 }
 
+export const AdvancedFuzzyReplacer: Replacer = function* (content, find) {
+  const originalLines = content.split("\n")
+  const searchLines = find.split("\n")
+  
+  if (searchLines.length === 0) return
+  if (searchLines[searchLines.length - 1] === "") {
+    searchLines.pop()
+  }
+
+  // We need at least some lines to do block fuzzy matching so we don't accidentally match 1-liners randomly
+  if (searchLines.length < 2) return
+
+  let bestMatch: { startLine: number; endLine: number } | null = null
+  let maxSimilarity = -1
+  const threshold = 0.85
+
+  for (let i = 0; i <= originalLines.length - searchLines.length; i++) {
+    let blockSimilarity = 0
+    for (let j = 0; j < searchLines.length; j++) {
+      const originalLine = originalLines[i + j].trim()
+      const searchLine = searchLines[j].trim()
+      if (originalLine === "" && searchLine === "") {
+        blockSimilarity += 1.0
+      } else if (originalLine === "" || searchLine === "") {
+        blockSimilarity += 0.0
+      } else {
+        blockSimilarity += calculateSimilarity(originalLine, searchLine)
+      }
+    }
+    const avgSimilarity = blockSimilarity / searchLines.length
+    // Use >= so we pick the first match if multiple are identical score
+    if (avgSimilarity > maxSimilarity && avgSimilarity >= threshold) {
+      maxSimilarity = avgSimilarity
+      bestMatch = { startLine: i, endLine: i + searchLines.length - 1 }
+    }
+  }
+
+  if (bestMatch) {
+    const { startLine, endLine } = bestMatch
+    let matchStartIndex = 0
+    for (let k = 0; k < startLine; k++) {
+      matchStartIndex += originalLines[k].length + 1
+    }
+    let matchEndIndex = matchStartIndex
+    for (let k = startLine; k <= endLine; k++) {
+      matchEndIndex += originalLines[k].length
+      if (k < endLine) {
+        matchEndIndex += 1
+      }
+    }
+    yield content.substring(matchStartIndex, matchEndIndex)
+  }
+}
+
 export function trimDiff(diff: string): string {
   const lines = diff.split("\n")
   const contentLines = lines.filter(
@@ -644,6 +680,7 @@ export function replace(content: string, oldString: string, newString: string, r
     TrimmedBoundaryReplacer,
     ContextAwareReplacer,
     MultiOccurrenceReplacer,
+    AdvancedFuzzyReplacer,
   ]) {
     for (const search of replacer(content, oldString)) {
       const index = content.indexOf(search)

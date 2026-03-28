@@ -1,4 +1,5 @@
 import { Tool } from "./tool"
+import path from "path"
 import DESCRIPTION from "./task.txt"
 import z from "zod"
 import { Session } from "../session"
@@ -16,6 +17,7 @@ const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
   prompt: z.string().describe("The task for the agent to perform"),
   subagent_type: z.string().describe("The type of specialized agent to use for this task"),
+  directory: z.string().describe("Optional subdirectory path to restrict this agent's scope (e.g., 'frontend/' or 'packages/ui'). The agent will treat this as its working directory.").optional(),
   task_id: z
     .string()
     .describe(
@@ -75,6 +77,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         return await Session.create({
           parentID: ctx.sessionID,
           title: params.description + ` (@${agent.name} subagent)`,
+          directory: params.directory ? path.resolve(ctx.cwd, params.directory) : ctx.cwd,
           permission: [
             ...(hasTodoWritePermission
               ? []

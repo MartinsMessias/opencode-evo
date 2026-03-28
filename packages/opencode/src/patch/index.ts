@@ -3,6 +3,7 @@ import * as path from "path"
 import * as fs from "fs/promises"
 import { readFileSync } from "fs"
 import { Log } from "../util/log"
+import { calculateSimilarity } from "../util/string"
 
 export namespace Patch {
   const log = Log.create({ service: "patch" })
@@ -484,7 +485,34 @@ export namespace Patch {
       (a, b) => normalizeUnicode(a.trim()) === normalizeUnicode(b.trim()),
       eof,
     )
-    return normalized
+    if (normalized !== -1) return normalized
+
+    // Pass 5: Fuzzy Matching (Levenshtein) with 85% threshold
+    let bestIndex = -1
+    let highestSimilarity = 0
+    const threshold = 0.85
+
+    for (let i = startIndex; i <= lines.length - pattern.length; i++) {
+      let blockSimilarity = 0
+      for (let j = 0; j < pattern.length; j++) {
+        const originalLine = lines[i + j].trim()
+        const patternLine = pattern[j].trim()
+        if (originalLine === "" && patternLine === "") {
+          blockSimilarity += 1.0
+        } else if (originalLine === "" || patternLine === "") {
+          blockSimilarity += 0.0
+        } else {
+          blockSimilarity += calculateSimilarity(originalLine, patternLine)
+        }
+      }
+      const avgSimilarity = blockSimilarity / pattern.length
+      if (avgSimilarity > highestSimilarity && avgSimilarity >= threshold) {
+        highestSimilarity = avgSimilarity
+        bestIndex = i
+      }
+    }
+
+    return bestIndex
   }
 
   function generateUnifiedDiff(oldContent: string, newContent: string): string {

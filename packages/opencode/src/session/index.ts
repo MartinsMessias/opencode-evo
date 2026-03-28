@@ -330,6 +330,7 @@ export namespace Session {
       title?: string
       permission?: Permission.Ruleset
       workspaceID?: WorkspaceID
+      directory?: string
     }) => Effect.Effect<Info>
     readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info>
     readonly touch: (sessionID: SessionID) => Effect.Effect<void>
@@ -511,10 +512,11 @@ export namespace Session {
         title?: string
         permission?: Permission.Ruleset
         workspaceID?: WorkspaceID
+        directory?: string
       }) {
         return yield* createNext({
           parentID: input?.parentID,
-          directory: Instance.directory,
+          directory: input?.directory ?? Instance.directory,
           title: input?.title,
           permission: input?.permission,
           workspaceID: input?.workspaceID,
@@ -709,6 +711,7 @@ export namespace Session {
         title: z.string().optional(),
         permission: Info.shape.permission,
         workspaceID: WorkspaceID.zod.optional(),
+        directory: z.string().optional(),
       })
       .optional(),
     (input) => runPromise((svc) => svc.create(input)),
