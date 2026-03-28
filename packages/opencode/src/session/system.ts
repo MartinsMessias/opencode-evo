@@ -59,6 +59,14 @@ export namespace SystemPrompt {
             : ""
         }`,
         `</directories>`,
+        `<tool_routing>`,
+        `  When you need to find where a function/class/type is defined, who calls it, or what implements it, ALWAYS prefer the code_graph tool over grep. It uses LSP for precise structural matches.`,
+        `  Use ast_patch ONLY for structural refactors: adding/removing imports, adding parameters, renaming symbols, or removing functions. For inserting or removing text/comments/lines, use the regular Edit tool.`,
+        `  Use grep/ripgrep for plain text search, patterns across many files, or non-TS/JS files.`,
+        `</tool_routing>`,
+        `<swarm_orchestration>`,
+        `  Always think in parallel. If a task is complex or involves multiple independent steps, act as an Orchestrator and use the swarm tool to delegate them to specialized subagents. Do not process them sequentially if they can be done concurrently.`,
+        `</swarm_orchestration>`,
       ].join("\n"),
     ]
   }

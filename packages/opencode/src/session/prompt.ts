@@ -801,12 +801,11 @@ export namespace SessionPrompt {
           await Session.updatePart({
             ...match,
             state: {
-              title: val.title,
-              metadata: val.metadata,
-              status: "running",
-              input: args,
-              time: {
-                start: Date.now(),
+              ...match.state,
+              title: val.title ?? (match.state as any).title,
+              metadata: {
+                ...(match.state.metadata ?? {}),
+                ...(val.metadata ?? {}),
               },
             },
           })
