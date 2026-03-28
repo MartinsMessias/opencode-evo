@@ -27,12 +27,15 @@ export namespace Memory {
     log.info("memory.search", { project, query })
 
     return Database.use((db) => {
-      const q = db.select().from(MemoryTable).where(
-        and(
-          eq(MemoryTable.project_id, project),
-          query.trim() ? sql`${MemoryTable.content} LIKE ${`%${query.replace(/%/g, "\\%")}%`}` : undefined
+      const q = db
+        .select()
+        .from(MemoryTable)
+        .where(
+          and(
+            eq(MemoryTable.project_id, project),
+            query.trim() ? sql`${MemoryTable.content} LIKE ${`%${query.replace(/%/g, "\\%")}%`}` : undefined,
+          ),
         )
-      )
 
       return q.orderBy(desc(MemoryTable.time_updated)).limit(15).all()
     })
