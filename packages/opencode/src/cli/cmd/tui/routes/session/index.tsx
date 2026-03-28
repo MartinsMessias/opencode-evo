@@ -500,7 +500,7 @@ export function Session() {
       },
     },
     {
-      title: "Undo previous message",
+      title: "Undo last iteration (Revert Files)",
       value: "session.undo",
       keybind: "messages_undo",
       category: "Session",
@@ -519,6 +519,7 @@ export function Session() {
             messageID: message.id,
           })
           .then(() => {
+            toast.show({ message: "Restored files to checkpoint!", variant: "success" })
             toBottom()
           })
         const parts = sync.data.part[message.id]
@@ -1325,6 +1326,8 @@ function UserMessage(props: {
 
 function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const local = useLocal()
+  const sdk = useSDK()
+  const toast = useToast()
   const { theme } = useTheme()
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
@@ -1384,7 +1387,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
+          <box paddingLeft={3} flexDirection="row" gap={1}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1405,6 +1408,25 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
             </text>
+            <Show when={props.last && final() && !props.message.error}>
+              <box 
+                flexDirection="row"
+                marginTop={1}
+                onMouseUp={() => {
+                   sdk.client.session.revert({
+                     sessionID: props.message.sessionID,
+                     messageID: props.message.parentID!,
+                   }).then(() => {
+                     toast.show({ message: "Restored files to checkpoint!", variant: "success" })
+                   }).catch(() => {
+                     toast.show({ message: "Failed to undo iteration", variant: "error" })
+                   })
+                }}
+              >
+                <text fg={theme.textMuted}>· </text>
+                <text fg={theme.textMuted} bg={theme.backgroundPanel}> [ ↺ Undo ] </text>
+              </box>
+            </Show>
           </box>
         </Match>
       </Switch>
