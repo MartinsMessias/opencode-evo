@@ -24,6 +24,7 @@ import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
 import { SemanticSearchTool } from "./semantic_search"
+import { AstEditTool } from "./ast_edit"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { LspTool } from "./lsp"
@@ -133,6 +134,7 @@ export namespace ToolRegistry {
           WebSearchTool,
           CodeSearchTool,
           SemanticSearchTool,
+          AstEditTool,
           SkillTool,
           ApplyPatchTool,
           ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
