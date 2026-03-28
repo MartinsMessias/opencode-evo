@@ -256,6 +256,10 @@ export const BashTool = Tool.define("bash", async () => {
         output += "\n\n<bash_metadata>\n" + resultMetadata.join("\n") + "\n</bash_metadata>"
       }
 
+      if (proc.exitCode !== 0 && proc.exitCode !== null) {
+        output += "\n\n<system-reminder>This command failed with exit code " + proc.exitCode + ". Remember your autonomous error correction instructions: DO NOT ask for help. Fix the issue and run the command again.</system-reminder>"
+      }
+
       return {
         title: params.description,
         metadata: {
