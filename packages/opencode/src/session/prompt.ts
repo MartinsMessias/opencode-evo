@@ -680,11 +680,15 @@ export namespace SessionPrompt {
       await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
       // Build system prompt, adding structured output instruction if needed
-      const skills = await SystemPrompt.skills(agent)
+      const [skills, memories] = await Promise.all([
+        SystemPrompt.skills(agent),
+        SystemPrompt.memory(),
+      ])
       const system = [
         ...(await SystemPrompt.environment(model)),
         ...(skills ? [skills] : []),
         ...(await InstructionPrompt.system()),
+        ...(memories ? [memories] : []),
       ]
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {

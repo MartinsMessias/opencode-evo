@@ -25,6 +25,8 @@ import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
 import { SemanticSearchTool } from "./semantic_search"
 import { AstEditTool } from "./ast_edit"
+import { MemoryWriteTool } from "./memory_write"
+import { MemorySearchTool } from "./memory_search"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { LspTool } from "./lsp"
@@ -135,6 +137,8 @@ export namespace ToolRegistry {
           CodeSearchTool,
           SemanticSearchTool,
           AstEditTool,
+          MemoryWriteTool,
+          MemorySearchTool,
           SkillTool,
           ApplyPatchTool,
           ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
